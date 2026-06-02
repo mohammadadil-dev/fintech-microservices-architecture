@@ -1,198 +1,187 @@
 # FinTech Microservices Architecture
 
-A reference architecture for building scalable, secure, and event-driven FinTech platforms using Java, Spring Boot, Apache Kafka, PostgreSQL, Redis, Keycloak, and cloud-native deployment patterns.
+Reference architecture for building scalable digital lending and financial platforms using Spring Boot, Apache Kafka, PostgreSQL, Redis, Keycloak, and cloud-native deployment patterns.
 
 ## Overview
 
-This repository demonstrates a high-level microservices architecture for a digital lending and financial services platform.
+This repository demonstrates a production-grade microservices architecture commonly used in modern FinTech platforms.
 
-It focuses on system design, service boundaries, event-driven communication, security, scalability, observability, and deployment patterns commonly used in modern FinTech systems.
+The design focuses on:
 
-## Architecture Goals
+* Loan Origination Systems (LOS)
+* Customer Onboarding
+* Eligibility Evaluation
+* Contract Lifecycle Management
+* Payment Processing
+* Event-Driven Communication
+* Security & Compliance
+* Cloud-Native Scalability
 
-* Scalable microservices design
-* Event-driven communication using Kafka
-* Secure authentication and authorization
-* Reliable payment and loan processing
-* Distributed transaction handling
-* Observability and monitoring
-* Cloud-ready deployment model
+---
 
-## High-Level Architecture
+## Architecture Diagram
 
 ```mermaid
 flowchart TD
-    A[Customer Mobile/Web App] --> B[API Gateway]
 
-    B --> C[Auth Service / Keycloak]
-    B --> D[Customer Service]
-    B --> E[Loan Origination Service]
-    B --> F[Payment Service]
+    A[Mobile App / Web Portal]
+
+    A --> B[API Gateway]
+
+    B --> C[Customer Service]
+    B --> D[Loan Origination Service]
+    B --> E[Payment Service]
+    B --> F[Contract Service]
     B --> G[Notification Service]
 
-    D --> DB1[(Customer DB)]
-    E --> DB2[(Loan DB)]
-    F --> DB3[(Payment DB)]
+    C --> DB1[(Customer DB)]
+    D --> DB2[(Loan DB)]
+    E --> DB3[(Payment DB)]
+    F --> DB4[(Contract DB)]
 
-    E --> K[Kafka Broker]
+    D --> K[Kafka]
+    E --> K
     F --> K
-    G --> K
 
     K --> H[Eligibility Service]
-    K --> I[Contract Service]
-    K --> J[Audit Service]
+    K --> I[Audit Service]
 
-    H --> DB4[(Eligibility DB)]
-    I --> DB5[(Contract DB)]
-    J --> DB6[(Audit DB)]
-
-    F --> X[External Payment Gateway]
-    E --> Y[External Credit Bureau / Risk Engine]
-    I --> Z[Digital Signature Provider]
+    E --> PG[Payment Gateway]
+    H --> RAC[Risk & Credit Engine]
 ```
 
-## Core Microservices
+---
 
-| Service                  | Responsibility                                             |
-| ------------------------ | ---------------------------------------------------------- |
-| API Gateway              | Request routing, rate limiting, authentication forwarding  |
-| Customer Service         | Customer profile, onboarding, KYC data                     |
-| Loan Origination Service | Loan application, eligibility, offer, approval workflow    |
-| Eligibility Service      | Business rules, scoring, risk checks                       |
-| Contract Service         | Contract generation, digital signature, document lifecycle |
-| Payment Service          | Disbursement, repayment, payment status tracking           |
-| Notification Service     | SMS, email, push notifications                             |
-| Audit Service            | Audit logs, compliance events, traceability                |
+## Core Services
 
-## Event-Driven Flow
+| Service                  | Responsibility                   |
+| ------------------------ | -------------------------------- |
+| API Gateway              | Routing, Security, Rate Limiting |
+| Customer Service         | Customer Profile & Onboarding    |
+| Loan Origination Service | Application & Offer Processing   |
+| Eligibility Service      | Risk Assessment & Scoring        |
+| Contract Service         | Contract Generation & Signing    |
+| Payment Service          | Loan Disbursement & Repayment    |
+| Notification Service     | SMS, Email, Push Notifications   |
+| Audit Service            | Compliance & Audit Tracking      |
 
-```mermaid
-sequenceDiagram
-    participant Customer
-    participant Gateway
-    participant LoanService
-    participant Kafka
-    participant EligibilityService
-    participant ContractService
-    participant PaymentService
-    participant NotificationService
+---
 
-    Customer->>Gateway: Submit loan application
-    Gateway->>LoanService: Create application
-    LoanService->>Kafka: LoanApplicationCreated
-    Kafka->>EligibilityService: Consume event
-    EligibilityService->>Kafka: EligibilityApproved
-    Kafka->>ContractService: Generate contract
-    ContractService->>Kafka: ContractSigned
-    Kafka->>PaymentService: Initiate disbursement
-    PaymentService->>Kafka: PaymentCompleted
-    Kafka->>NotificationService: Send notification
-```
+## Event Driven Communication
+
+Apache Kafka is used for asynchronous communication between services.
+
+Example business events:
+
+* CustomerCreated
+* LoanApplicationSubmitted
+* EligibilityApproved
+* ContractGenerated
+* ContractSigned
+* PaymentInitiated
+* PaymentCompleted
+
+---
 
 ## Technology Stack
 
-| Layer       | Technology               |
-| ----------- | ------------------------ |
-| Backend     | Java, Spring Boot        |
-| API Gateway | Spring Cloud Gateway     |
-| Messaging   | Apache Kafka             |
-| Database    | PostgreSQL               |
-| Cache       | Redis                    |
-| Security    | Keycloak, JWT, OAuth2    |
-| Monitoring  | ELK, Grafana, Prometheus |
-| Deployment  | Docker, Kubernetes       |
-| CI/CD       | Jenkins, GitHub Actions  |
+| Layer      | Technology            |
+| ---------- | --------------------- |
+| Backend    | Java, Spring Boot     |
+| Messaging  | Apache Kafka          |
+| Database   | PostgreSQL            |
+| Cache      | Redis                 |
+| Security   | Keycloak, OAuth2, JWT |
+| Monitoring | ELK, Grafana          |
+| Deployment | Docker, Kubernetes    |
+| CI/CD      | Jenkins               |
 
-## Security Design
+---
 
-* OAuth2 / OpenID Connect based authentication
-* JWT-based API authorization
-* Role-based access control
-* Service-to-service authentication
-* API Gateway level request validation
-* Secure secrets management
-* Audit logging for sensitive actions
-
-## Reliability Patterns
-
-* Idempotency keys for payment and loan operations
-* Retry with exponential backoff
-* Dead Letter Topics for failed Kafka events
-* Circuit breaker for external integrations
-* Distributed locking for scheduled jobs
-* Outbox pattern for reliable event publishing
-
-## Observability
-
-* Centralized logging using ELK
-* Distributed tracing using correlation IDs
-* Metrics collection using Prometheus
-* Dashboards using Grafana
-* Business alerts for payment, loan, and onboarding failures
-
-## Deployment View
+## Loan Origination Flow
 
 ```mermaid
-flowchart LR
-    Dev[Developer] --> Git[GitHub]
-    Git --> CI[CI/CD Pipeline]
-    CI --> Registry[Docker Registry]
-    Registry --> K8S[Kubernetes Cluster]
+sequenceDiagram
 
-    K8S --> Gateway[API Gateway Pod]
-    K8S --> Loan[Loan Service Pod]
-    K8S --> Payment[Payment Service Pod]
-    K8S --> Customer[Customer Service Pod]
-    K8S --> Kafka[Kafka Cluster]
-    K8S --> DB[(PostgreSQL)]
+Customer->>API Gateway: Submit Application
+API Gateway->>Loan Service: Create Application
+
+Loan Service->>Kafka: LoanApplicationSubmitted
+
+Kafka->>Eligibility Service: Evaluate Eligibility
+
+Eligibility Service->>Kafka: EligibilityApproved
+
+Kafka->>Contract Service: Generate Contract
+
+Contract Service->>Kafka: ContractSigned
+
+Kafka->>Payment Service: Initiate Disbursement
+
+Payment Service->>Customer: Funds Disbursed
 ```
 
-## Key Design Decisions
+---
 
-### 1. Database per Service
+## Payment Processing Flow
 
-Each microservice owns its own database to avoid tight coupling and improve independent scalability.
+```mermaid
+sequenceDiagram
 
-### 2. Kafka for Asynchronous Communication
+Payment Service->>Payment Gateway: Initiate Payment
 
-Kafka is used for business events such as loan application creation, eligibility approval, contract signing, and payment completion.
+Payment Gateway-->>Payment Service: Processing
 
-### 3. API Gateway as Entry Point
+Payment Gateway-->>Payment Service: Success
 
-All external traffic goes through the API Gateway for centralized routing, security, throttling, and logging.
+Payment Service->>Kafka: PaymentCompleted
 
-### 4. Idempotent Payment Processing
+Kafka->>Notification Service: Notify Customer
+```
 
-Payment APIs must be idempotent to avoid duplicate disbursement or repayment processing.
+---
 
-### 5. Observability First
+## Design Principles
 
-Business and technical monitoring are mandatory for FinTech platforms due to transaction sensitivity and compliance requirements.
+### Database Per Service
 
-## Suggested Repository Usage
+Each microservice owns its own database to ensure loose coupling and independent scalability.
 
-This repository can be used as:
+### Event-Driven Architecture
 
-* FinTech system design reference
-* Microservices architecture blueprint
-* Interview preparation material
-* Technical documentation sample
-* Architecture portfolio project
+Business events are exchanged through Kafka to improve resiliency and reduce service dependencies.
+
+### Idempotent Payments
+
+Payment APIs must support idempotency to prevent duplicate financial transactions.
+
+### Security First
+
+All services are secured using OAuth2, JWT tokens, and role-based access control.
+
+### Observability
+
+Centralized logging, metrics, and tracing are mandatory for financial systems.
+
+---
 
 ## Future Enhancements
 
-* Add detailed service-level API contracts
-* Add database schema examples
-* Add Kafka topic design
-* Add Kubernetes deployment YAML samples
-* Add Saga pattern implementation
-* Add Outbox pattern example
-* Add CI/CD pipeline sample
+* Saga Pattern Implementation
+* Outbox Pattern
+* Event Sourcing
+* Multi-Tenant Architecture
+* AI-Powered Customer Assistant
+* Open Banking Integrations
+
+---
 
 ## Author
 
 Mohammad Adil
 
-FinTech Backend Lead | Java Architect | AI Engineer
+🏦 FinTech Backend Lead
+☕ Java Architect
+🤖 AI Engineer
 
 Building scalable financial platforms and AI-powered solutions.
